@@ -3,7 +3,7 @@ import pandas as pd #TO IMPORT: pip install pandas
 import sqlalchemy as sa # TO IMPORT: python pip install sqlalchemy
 
 # Change "YOURUSER" to Local User and "YOURPASSWORD" to Local Password
-connection = MySQLdb.connect("localhost",  "YOURUSER", "YOURPASSWORD", "seriousmd") 
+connection = MySQLdb.connect("localhost",  "Tim", "Tif2003#", "seriousmd") 
 
 # Create cursor and use it to execute SQL command
 cursor = connection.cursor()
@@ -23,8 +23,13 @@ pxdf['age'] = pxdf['age'].fillna(0)
 # Remove unnecessary line breaks in doctors.csv
 doctorsdf = doctorsdf.replace('\n','', regex=True)
 
-# Showing it worked
-print(doctorsdf.iloc[10590:10600].to_string(index=False))
+# Trimming appointments.csv into rows that have a matching IDs in other CSVs
+appointmentsdf = appointmentsdf[appointmentsdf['pxid'].isin(pxdf['pxid'])]
+appointmentsdf = appointmentsdf[appointmentsdf['doctorid'].isin(doctorsdf['doctorid'])]
+appointmentsdf = appointmentsdf[appointmentsdf['clinicid'].isin(clinicsdf['clinicid'])]
+
+# New appointmentsdf # of rows
+print(len(appointmentsdf))
 
 """
 LOADING TO MYSQL
