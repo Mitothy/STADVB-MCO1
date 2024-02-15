@@ -2,8 +2,22 @@ import MySQLdb # TO IMPORT: pip install mysqlclient
 import pandas as pd #TO IMPORT: pip install pandas
 import sqlalchemy as sa # TO IMPORT: python pip install sqlalchemy
 
+def clean_gender(gender):
+    gender = gender.upper().strip()  # Convert to uppercase and strip whitespace
+    if 'FEM' in gender:
+        return 'FEMALE'
+    elif 'MAL' in gender:
+        return 'MALE'
+    else:
+        return None  # Return None or a default value if gender is unrecognizable
+
+
 # Change "YOURUSER" to Local User and "YOURPASSWORD" to Local Password
 connection = MySQLdb.connect("localhost",  "Tim", "Tif2003#", "seriousmd") 
+
+# Create engine for loading into mySQL
+engine = sa.create_engine("mysql+mysqldb://Tim:Tif2003#@localhost/seriousmd")
+
 
 # Create cursor and use it to execute SQL command
 cursor = connection.cursor()
@@ -21,10 +35,12 @@ CLEANING
 pxdf['age'] = pxdf['age'].fillna(0)
 pxdf['age'] = pd.to_numeric(pxdf['age'], errors='coerce')
 pxdf = pxdf.drop_duplicates(subset='pxid', keep='first')
-pxdf.loc[pxdf['age'] > 116, 'age'] = -1 # Oldest recorded age is 116
+pxdf['gender'] = pxdf['gender'].apply(clean_gender)
+pxdf.loc[pxdf['age'] > 116, 'age'] = 999 # Oldest recorded age is 116
+pxdf.loc[pxdf['age'] < 0, 'age'] = 999 # Oldest recorded age is 116
 
 # Cleaning doctor.csv
-doctorsdf['age'] = pd.to_numeric(doctorsdf['age'], errors='coerce').fillna(-1)  
+doctorsdf['age'] = pd.to_numeric(doctorsdf['age'], errors='coerce').fillna(999)  
 doctorsdf['mainspecialty'].fillna('Unknown', inplace=True)
 doctorsdf = doctorsdf.replace('\n','', regex=True)
 doctorsdf = doctorsdf.drop_duplicates(subset='doctorid', keep='first')
@@ -41,11 +57,20 @@ appointmentsdf['QueueDate'] = pd.to_datetime(appointmentsdf['QueueDate'], format
 appointmentsdf['StartTime'] = pd.to_datetime(appointmentsdf['StartTime'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
 appointmentsdf['EndTime'] = pd.to_datetime(appointmentsdf['EndTime'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
 
-print(appointmentsdf)
+#print(pxdf.iloc[548:552])
+
 
 """
 LOADING TO MYSQL
+
+doctorsdf.to_sql('dim_doc', con=engine, if_exists='append', index=False)
+pxdf.to_sql('dim_px', con=engine, if_exists='append', index=False)
+appointmentsdf.to_sql('fact_appt', con=engine, if_exists='append', index=False)
 """
 
+clinicsdf.to_sql('dim_clinic', con=engine, if_exists='append', index=False)
+
 # Close Connection to mySQL
+cursor.close()
+engine.dispose()
 connection.close()  
