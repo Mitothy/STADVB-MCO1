@@ -18,25 +18,24 @@ appointmentsdf = pd.read_csv('appointments.csv', encoding="ISO-8859-1")
 CLEANING
 """
 
-# Replace Null Values with 0 in px.csv
+# Cleaning px.csv
 pxdf['age'] = pxdf['age'].fillna(0)
+pxdf['age'] = pd.to_numeric(pxdf['age'], errors='coerce')
 pxdf = pxdf.drop_duplicates(subset='pxid', keep='first')
+pxdf.loc[pxdf['age'] > 116, 'age'] = -1 # Oldest recorded age is 116
 
-# Remove unnecessary line breaks in doctors.csv
+
+# Cleaning doctor.csv
 doctorsdf = doctorsdf.replace('\n','', regex=True)
 doctorsdf = doctorsdf.drop_duplicates(subset='doctorid', keep='first')
 
 # Cleaning clinics.csv 
-clinicsdf['hospitalname'].replace('', 'Unknown', inplace=True)
 clinicsdf = clinicsdf.drop_duplicates(subset='clinicid', keep='first')
 
 # Trimming appointments.csv into rows that have a matching IDs in other CSVs
 appointmentsdf = appointmentsdf[appointmentsdf['pxid'].isin(pxdf['pxid'])]
 appointmentsdf = appointmentsdf[appointmentsdf['doctorid'].isin(doctorsdf['doctorid'])]
 appointmentsdf = appointmentsdf[appointmentsdf['clinicid'].isin(clinicsdf['clinicid'])]
-
-# New appointmentsdf # of rows
-print(len(appointmentsdf))
 
 """
 LOADING TO MYSQL
