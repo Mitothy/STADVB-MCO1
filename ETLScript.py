@@ -38,9 +38,11 @@ pxdf['gender'] = pxdf['gender'].apply(clean_gender)
 pxdf = pxdf.dropna(subset=['age'])
 pxdf['age'] = pd.to_numeric(pxdf['age'], errors='coerce')
 pxdf = pxdf[(pxdf['age'] >= 0) & (pxdf['age'] <= 116)] # Oldest Recorded Age
+pxdf = pxdf[pxdf['pxid'].isin(appointmentsdf['pxid'])]
+
 
 # Cleaning doctor.csv
-doctorsdf['age'] = pd.to_numeric(doctorsdf['age'], errors='coerce').fillna(999)  
+doctorsdf['age'] = pd.to_numeric(doctorsdf['age'], errors='coerce').fillna(999) # NEEDS CHANGING I FORGOT WHY I DID THIS
 doctorsdf['mainspecialty'].fillna('Unknown', inplace=True)
 doctorsdf = doctorsdf.replace('\n','', regex=True)
 doctorsdf = doctorsdf.drop_duplicates(subset='doctorid', keep='first')
@@ -48,7 +50,7 @@ doctorsdf = doctorsdf.drop_duplicates(subset='doctorid', keep='first')
 # Cleaning clinics.csv 
 clinicsdf = clinicsdf.drop_duplicates(subset='clinicid', keep='first')
 
-# Trimming appointments.csv into rows that have a matching IDs in other CSVs
+# Cleaning appointments.csv
 appointmentsdf = appointmentsdf[appointmentsdf['pxid'].isin(pxdf['pxid'])]
 appointmentsdf = appointmentsdf[appointmentsdf['doctorid'].isin(doctorsdf['doctorid'])]
 appointmentsdf = appointmentsdf[appointmentsdf['clinicid'].isin(clinicsdf['clinicid'])]
@@ -59,11 +61,11 @@ appointmentsdf['EndTime'] = pd.to_datetime(appointmentsdf['EndTime'], format='%Y
 
 """
 LOADING TO MYSQL
-appointmentsdf.to_sql('fact_appt', con=engine, if_exists='append', index=False)
 """
-
 clinicsdf.to_sql('dim_clinic', con=engine, if_exists='append', index=False)
 doctorsdf.to_sql('dim_doc', con=engine, if_exists='append', index=False)
+pxdf.to_sql('dim_px', con=engine, if_exists='append', index=False)
+appointmentsdf.to_sql('fact_appt', con=engine, if_exists='append', index=False)
 
 # Close Connection to mySQL
 cursor.close() 
