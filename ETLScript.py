@@ -1,6 +1,8 @@
 import MySQLdb # TO IMPORT: pip install mysqlclient
 import pandas as pd #TO IMPORT: pip install pandas
 import sqlalchemy as sa # TO IMPORT: python pip install sqlalchemy
+import numpy as np
+
 
 def clean_gender(gender):
     gender = gender.upper().strip()  # Convert to uppercase and strip whitespace
@@ -27,8 +29,6 @@ clinicsdf = pd.read_csv('clinics.csv', encoding="ISO-8859-1")
 pxdf = pd.read_csv('px.csv', encoding="ISO-8859-1")
 appointmentsdf = pd.read_csv('appointments.csv', encoding="ISO-8859-1")
 
-print(len(pxdf))
-
 """
 CLEANING
 """
@@ -36,6 +36,7 @@ CLEANING
 pxdf = pxdf.drop_duplicates(subset='pxid', keep='first')
 pxdf['gender'] = pxdf['gender'].apply(clean_gender)
 pxdf = pxdf.dropna(subset=['age'])
+pxdf['age'] = pd.to_numeric(pxdf['age'], errors='coerce')
 pxdf = pxdf[(pxdf['age'] >= 0) & (pxdf['age'] <= 116)] # Oldest Recorded Age
 
 # Cleaning doctor.csv
@@ -58,16 +59,13 @@ appointmentsdf['EndTime'] = pd.to_datetime(appointmentsdf['EndTime'], format='%Y
 
 """
 LOADING TO MYSQL
-
-clinicsdf.to_sql('dim_clinic', con=engine, if_exists='append', index=False)
-pxdf.to_sql('dim_px', con=engine, if_exists='append', index=False)
-doctorsdf.to_sql('dim_doc', con=engine, if_exists='append', index=False)
 appointmentsdf.to_sql('fact_appt', con=engine, if_exists='append', index=False)
 """
 
-print(len(pxdf))
+clinicsdf.to_sql('dim_clinic', con=engine, if_exists='append', index=False)
+doctorsdf.to_sql('dim_doc', con=engine, if_exists='append', index=False)
 
 # Close Connection to mySQL
-cursor.close()
+cursor.close() 
 engine.dispose()
 connection.close()  
