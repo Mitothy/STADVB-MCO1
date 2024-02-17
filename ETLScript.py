@@ -30,15 +30,6 @@ appointmentsdf = pd.read_csv('appointments.csv', encoding="ISO-8859-1")
 """
 CLEANING
 """
-# Cleaning px.csv
-pxdf = pxdf.drop_duplicates(subset='pxid', keep='first')
-pxdf['gender'] = pxdf['gender'].apply(clean_gender)
-pxdf = pxdf.dropna(subset=['age'])
-pxdf['age'] = pd.to_numeric(pxdf['age'], errors='coerce')
-pxdf = pxdf[(pxdf['age'] >= 0) & (pxdf['age'] <= 116)] # Oldest Recorded Age
-pxdf = pxdf[pxdf['pxid'].isin(appointmentsdf['pxid'])]
-
-
 # Cleaning doctor.csv
 doctorsdf['age'] = pd.to_numeric(doctorsdf['age'], errors='coerce').fillna(999) # NEEDS CHANGING I FORGOT WHY I DID THIS
 doctorsdf['mainspecialty'].fillna('Unknown', inplace=True)
@@ -47,6 +38,14 @@ doctorsdf = doctorsdf.drop_duplicates(subset='doctorid', keep='first')
 
 # Cleaning clinics.csv
 clinicsdf = clinicsdf.drop_duplicates(subset='clinicid', keep='first')
+
+# Cleaning px.csv
+pxdf = pxdf.drop_duplicates(subset='pxid', keep='first')
+pxdf['gender'] = pxdf['gender'].apply(clean_gender)
+pxdf = pxdf.dropna(subset=['age'])
+pxdf['age'] = pd.to_numeric(pxdf['age'], errors='coerce')
+pxdf = pxdf[(pxdf['age'] >= 0) & (pxdf['age'] <= 116)] # Oldest Recorded Age
+pxdf = pxdf[pxdf['pxid'].isin(appointmentsdf['pxid'])]
 
 # Cleaning appointments.csv
 appointmentsdf = appointmentsdf[appointmentsdf['pxid'].isin(pxdf['pxid'])]
