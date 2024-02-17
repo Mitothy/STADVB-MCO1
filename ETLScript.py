@@ -1,8 +1,8 @@
-import MySQLdb # TO IMPORT: pip install mysqlclient
 import pandas as pd #TO IMPORT: pip install pandas
-import sqlalchemy as sa # TO IMPORT: python pip install sqlalchemy
-import numpy as np
+import sqlalchemy as sa # TO IMPORT: pip install sqlalchemy
 
+USERNAME = "root"
+PASSWORD = "admin"
 
 def clean_gender(gender):
     gender = gender.upper().strip()  # Convert to uppercase and strip whitespace
@@ -15,13 +15,11 @@ def clean_gender(gender):
 
 
 # Change "YOURUSER" to Local User and "YOURPASSWORD" to Local Password
-connection = MySQLdb.connect("localhost",  "Tim", "Tif2003#", "seriousmd") 
 
 # Create engine for loading into mySQL
-engine = sa.create_engine("mysql+mysqldb://Tim:Tif2003#@localhost/seriousmd")
+engine = sa.create_engine("mysql+mysqldb://"+USERNAME+":"+PASSWORD+"@localhost/seriousmd")
 
 # Create cursor and use it to execute SQL command
-cursor = connection.cursor()
 
 # Loading CSVs
 doctorsdf = pd.read_csv('doctors.csv', encoding="ISO-8859-1")
@@ -47,7 +45,7 @@ doctorsdf['mainspecialty'].fillna('Unknown', inplace=True)
 doctorsdf = doctorsdf.replace('\n','', regex=True)
 doctorsdf = doctorsdf.drop_duplicates(subset='doctorid', keep='first')
 
-# Cleaning clinics.csv 
+# Cleaning clinics.csv
 clinicsdf = clinicsdf.drop_duplicates(subset='clinicid', keep='first')
 
 # Cleaning appointments.csv
@@ -68,6 +66,4 @@ pxdf.to_sql('dim_px', con=engine, if_exists='append', index=False)
 appointmentsdf.to_sql('fact_appt', con=engine, if_exists='append', index=False)
 
 # Close Connection to mySQL
-cursor.close() 
 engine.dispose()
-connection.close()  
