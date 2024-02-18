@@ -37,7 +37,7 @@ clinicsdf = pd.read_csv('clinics.csv', encoding="ISO-8859-1",
         'RegionName': 'string'
     })
 
-pxdf = pd.read_csv('px.csv', encoding="ISO-8859-1", skiprows=[995329],
+pxdf = pd.read_csv('px.csv', encoding="ISO-8859-1", skiprows=[995329], # Skip annoying extra header on line 995330
     dtype={
         'pxid': 'string',
         'age': 'Int32',
