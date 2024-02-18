@@ -67,9 +67,23 @@ doctorsdf['mainspecialty'] = doctorsdf['mainspecialty'].apply(lambda specialty: 
 # Youngest doctor ever (17) to older recorded age (122)
 doctorsdf.loc[~((doctorsdf['age'] >= 17) & (doctorsdf['age'] <= 122)), 'age'] = None
 
-
-# Cleaning clinics.csv
+# clinics.csv
+# Check for duplicates
 clinicsdf = clinicsdf.drop_duplicates(subset='clinicid', keep='first')
+
+# String transformations
+clinicsdf = clinicsdf.replace('\n', '', regex=True)
+clinicsdf = clinicsdf.replace('\"', '', regex=True)
+clinicsdf['City'] = clinicsdf['City'].str.title()
+clinicsdf['City'] = clinicsdf['City'].str.replace(' City', '') # Remove unnecessary 'City' after each name
+
+# Standardize city names and replace invalid with null
+clinicsdf = clinicsdf.replace({ 'City': facts.city_dict })
+clinicsdf['City'] = clinicsdf['City'].apply(lambda city: city if not pd.isnull(city) and facts.is_valid_city(city) else None)
+
+# Standardize province names and replace invalid with null
+clinicsdf = clinicsdf.replace({ 'Province': facts.province_dict })
+clinicsdf['Province'] = clinicsdf['Province'].apply(lambda province: province if not pd.isnull(province) and facts.is_valid_province(province) else None)
 
 # Cleaning px.csv
 pxdf = pxdf.drop_duplicates(subset='pxid', keep='first')
