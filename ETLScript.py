@@ -1,3 +1,28 @@
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+from datetime import datetime
+import time
+import logging
+
+logging.basicConfig()
+logger = logging.getLogger("myapp.sqltime")
+logger.setLevel(logging.DEBUG)
+
+@event.listens_for(Engine, "before_cursor_execute")
+def before_cursor_execute(conn, cursor, statement,
+                        parameters, context, executemany):
+    conn.info.setdefault('query_start_time', []).append(time.time())
+    now = datetime.now().strftime("%H:%M:%S")
+    logger.debug(" Start Query at %s: %s", now, statement)
+
+@event.listens_for(Engine, "after_cursor_execute")
+def after_cursor_execute(conn, cursor, statement,
+                        parameters, context, executemany):
+    total = time.time() - conn.info['query_start_time'].pop(-1)
+    logger.debug(" Query Complete!")
+    logger.debug(" Total Time: %f", total)
+
+
 import pandas as pd #TO IMPORT: pip install pandas
 import sqlalchemy as sa # TO IMPORT: pip install sqlalchemy
 import facts
@@ -20,13 +45,16 @@ def clean_gender(gender):
 engine = sa.create_engine("mysql+mysqldb://"+USERNAME+":"+PASSWORD+"@localhost/seriousmd")
 
 # Loading CSVs
+now = datetime.now()
 doctorsdf = pd.read_csv('doctors.csv', encoding="ISO-8859-1",
     dtype={
         'doctorid': 'string',
         'mainspecialty': 'string',
         'age': 'Int32'
     })
+print('doctors.csv loaded in', datetime.now() - now)
 
+now = datetime.now()
 clinicsdf = pd.read_csv('clinics.csv', encoding="ISO-8859-1",
     dtype={
         'clinicid': 'string',
@@ -36,22 +64,38 @@ clinicsdf = pd.read_csv('clinics.csv', encoding="ISO-8859-1",
         'Province': 'string',
         'RegionName': 'string'
     })
+print('clinics.csv loaded in', datetime.now() - now)
 
-pxdf = pd.read_csv('px.csv', encoding="ISO-8859-1", skiprows=[995329], # Skip annoying extra header on line 995330
+now = datetime.now()
+pxdf = pd.read_csv('px.csv', encoding="ISO-8859-1", skiprows=[995329], # nrows=50, # Skip annoying extra header on line 995330
     dtype={
         'pxid': 'string',
         'age': 'Int32',
         'gender': 'string'
     })
+print('px.csv loaded in', datetime.now() - now)
 
-appointmentsdf = pd.read_csv('appointments.csv', encoding="ISO-8859-1",
+now = datetime.now()
+appointmentsdf = pd.read_csv('appointments.csv', encoding="ISO-8859-1", # nrows=50,
     dtype={
-
+        'pxid': 'string',
+        'clinicid': 'string',
+        'doctorid': 'string',
+        'apptid': 'string',
+        'status': 'string',
+        'TimeQueued': 'string',
+        'QueueDate': 'string',
+        'StartTime': 'string',
+        'EndTime': 'string',
+        'type': 'string',
+        'Virtual': 'boolean',
     })
+print('appointments.csv loaded in', datetime.now() - now)
 
 """
 CLEANING
 """
+now = datetime.now()
 # doctor.csv
 # Check for duplicates
 doctorsdf = doctorsdf.drop_duplicates(subset=['doctorid'], keep='first')
@@ -66,7 +110,10 @@ doctorsdf['mainspecialty'] = doctorsdf['mainspecialty'].apply(lambda specialty: 
 # Replace invalid ages with null
 # Youngest doctor ever (17) to older recorded age (122)
 doctorsdf.loc[~((doctorsdf['age'] >= 17) & (doctorsdf['age'] <= 122)), 'age'] = None
+print('doctorsdf cleaned in', datetime.now() - now)
 
+
+now = datetime.now()
 # clinics.csv
 # Check for duplicates
 clinicsdf = clinicsdf.drop_duplicates(subset='clinicid', keep='first')
@@ -84,26 +131,53 @@ clinicsdf['City'] = clinicsdf['City'].apply(lambda city: city if not pd.isnull(c
 # Standardize province names and replace invalid with null
 clinicsdf = clinicsdf.replace({ 'Province': facts.province_dict })
 clinicsdf['Province'] = clinicsdf['Province'].apply(lambda province: province if not pd.isnull(province) and facts.is_valid_province(province) else None)
+print('clinicsdf cleaned in', datetime.now() - now)
 
 
+now = datetime.now()
 # px.csv
+# Remove unreferenced values
+pxdf = pxdf[pxdf['pxid'].isin(appointmentsdf['pxid'])]
+
+# Sort for faster insert
+pxdf = pxdf.sort_values('pxid')
+print('pxdf cleaned in', datetime.now() - now)
+
 # Check for duplicates
 pxdf = pxdf.drop_duplicates(subset='pxid', keep='first')
 
-# Clean gender
+# Standardize gender
 pxdf['gender'] = pxdf['gender'].apply(clean_gender)
 
 # Replace invalid ages with null
 pxdf.loc[~((pxdf['age'] >= 0) & (pxdf['age'] <= 122)), 'age'] = None # Oldest Recorded Age
 
-# Cleaning appointments.csv
+
+now = datetime.now()
+# appointments.csv
+# Remove unreferenced values
 appointmentsdf = appointmentsdf[appointmentsdf['pxid'].isin(pxdf['pxid'])]
 appointmentsdf = appointmentsdf[appointmentsdf['doctorid'].isin(doctorsdf['doctorid'])]
 appointmentsdf = appointmentsdf[appointmentsdf['clinicid'].isin(clinicsdf['clinicid'])]
-appointmentsdf['TimeQueued'] = pd.to_datetime(appointmentsdf['TimeQueued'], format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
-appointmentsdf['QueueDate'] = pd.to_datetime(appointmentsdf['QueueDate'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
-appointmentsdf['StartTime'] = pd.to_datetime(appointmentsdf['StartTime'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
-appointmentsdf['EndTime'] = pd.to_datetime(appointmentsdf['EndTime'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+print('appointmentsdf cleaned in', datetime.now() - now)
+
+# Drop input without queuedate
+appointmentsdf = appointmentsdf.dropna(subset=['QueueDate'])
+
+# Sort for faster insert
+appointmentsdf = appointmentsdf.sort_values('apptid')
+
+# Check for duplicates
+appointmentsdf = appointmentsdf.drop_duplicates(subset='apptid', keep='first')
+
+# Fill boolean column with false if empty
+appointmentsdf['Virtual'] = appointmentsdf['Virtual'].fillna(False)
+
+# Regex replace timestamp to match MySQL (find a '.' and remove that and all digits after)
+appointmentsdf['TimeQueued'] = appointmentsdf['TimeQueued'].replace(r'\.\d+', '', regex=True)
+appointmentsdf['QueueDate'] = appointmentsdf['QueueDate'].replace(r'\.\d+', '', regex=True)
+appointmentsdf['StartTime'] = appointmentsdf['StartTime'].replace(r'\.\d+', '', regex=True)
+appointmentsdf['EndTime'] = appointmentsdf['EndTime'].replace(r'\.\d+', '', regex=True)
 
 """
 LOADING TO MYSQL
