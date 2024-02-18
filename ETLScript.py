@@ -85,13 +85,16 @@ clinicsdf['City'] = clinicsdf['City'].apply(lambda city: city if not pd.isnull(c
 clinicsdf = clinicsdf.replace({ 'Province': facts.province_dict })
 clinicsdf['Province'] = clinicsdf['Province'].apply(lambda province: province if not pd.isnull(province) and facts.is_valid_province(province) else None)
 
-# Cleaning px.csv
+
+# px.csv
+# Check for duplicates
 pxdf = pxdf.drop_duplicates(subset='pxid', keep='first')
+
+# Clean gender
 pxdf['gender'] = pxdf['gender'].apply(clean_gender)
-pxdf = pxdf.dropna(subset=['age'])
-pxdf['age'] = pd.to_numeric(pxdf['age'], errors='coerce')
-pxdf = pxdf[(pxdf['age'] >= 0) & (pxdf['age'] <= 116)] # Oldest Recorded Age
-pxdf = pxdf[pxdf['pxid'].isin(appointmentsdf['pxid'])]
+
+# Replace invalid ages with null
+pxdf.loc[~((pxdf['age'] >= 0) & (pxdf['age'] <= 122)), 'age'] = None # Oldest Recorded Age
 
 # Cleaning appointments.csv
 appointmentsdf = appointmentsdf[appointmentsdf['pxid'].isin(pxdf['pxid'])]
