@@ -15,13 +15,8 @@ def clean_gender(gender):
     else:
         return None  # Return None or a default value if gender is unrecognizable
 
-
-# Change "YOURUSER" to Local User and "YOURPASSWORD" to Local Password
-
 # Create engine for loading into mySQL
 engine = sa.create_engine("mysql+mysqldb://"+USERNAME+":"+PASSWORD+"@localhost/seriousmd")
-
-# Create cursor and use it to execute SQL command
 
 # Loading CSVs
 doctorsdf = pd.read_csv('doctors.csv', encoding="ISO-8859-1")
@@ -61,8 +56,8 @@ appointmentsdf['EndTime'] = pd.to_datetime(appointmentsdf['EndTime'], format='%Y
 """
 LOADING TO MYSQL
 """
-clinicsdf.to_sql('dim_clinic', con=engine, if_exists='append', index=False)
 doctorsdf.to_sql('dim_doc', con=engine, if_exists='append', index=False)
+clinicsdf.to_sql('dim_clinic', con=engine, if_exists='append', index=False)
 pxdf.to_sql('dim_px', con=engine, if_exists='append', index=False)
 appointmentsdf.to_sql('fact_appt', con=engine, if_exists='append', index=False)
 
