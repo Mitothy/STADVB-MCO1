@@ -1,9 +1,11 @@
 import pandas as pd #TO IMPORT: pip install pandas
 import sqlalchemy as sa # TO IMPORT: pip install sqlalchemy
 
+# MySQL connection credentials
 USERNAME = "root"
 PASSWORD = "admin"
 
+# User defined functions
 def clean_gender(gender):
     gender = gender.upper().strip()  # Convert to uppercase and strip whitespace
     if 'FEM' in gender:
