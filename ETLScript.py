@@ -58,10 +58,10 @@ doctorsdf = doctorsdf.drop_duplicates(subset=['doctorid'], keep='first')
 
 # String transformations
 doctorsdf = doctorsdf.replace('\n','', regex=True)
-doctorsdf['mainspecialty'] = doctorsdf['mainspecialty'].str.upper()
+doctorsdf['mainspecialty'] = doctorsdf['mainspecialty'].str.title() # Change to titlecase for readability
 
 # Replace invalid specialties with null
-doctorsdf['mainspecialty'] = doctorsdf['mainspecialty'].apply(lambda x: x if not pd.isnull(x) and facts.is_valid_specialty(x) else None)
+doctorsdf['mainspecialty'] = doctorsdf['mainspecialty'].apply(lambda specialty: specialty if not pd.isnull(specialty) and facts.is_valid_specialty(specialty) else None)
 
 # Replace invalid ages with null
 # Youngest doctor ever (17) to older recorded age (122)
