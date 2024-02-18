@@ -1,5 +1,6 @@
 import pandas as pd #TO IMPORT: pip install pandas
 import sqlalchemy as sa # TO IMPORT: pip install sqlalchemy
+from facts import is_valid_specialty
 
 # MySQL connection credentials
 USERNAME = "root"
@@ -19,7 +20,6 @@ def clean_gender(gender):
 engine = sa.create_engine("mysql+mysqldb://"+USERNAME+":"+PASSWORD+"@localhost/seriousmd")
 
 # Loading CSVs
-doctorsdf = pd.read_csv('doctors.csv', encoding="ISO-8859-1")
 clinicsdf = pd.read_csv('clinics.csv', encoding="ISO-8859-1")
 pxdf = pd.read_csv('px.csv', encoding="ISO-8859-1")
 appointmentsdf = pd.read_csv('appointments.csv', encoding="ISO-8859-1")
@@ -28,10 +28,29 @@ appointmentsdf = pd.read_csv('appointments.csv', encoding="ISO-8859-1")
 CLEANING
 """
 # Cleaning doctor.csv
-doctorsdf['age'] = pd.to_numeric(doctorsdf['age'], errors='coerce').fillna(999) # NEEDS CHANGING I FORGOT WHY I DID THIS
-doctorsdf['mainspecialty'].fillna('Unknown', inplace=True)
-doctorsdf = doctorsdf.replace('\n','', regex=True)
+doctorsdf = pd.read_csv('doctors.csv', encoding="ISO-8859-1",
+    dtype={
+        'doctorid': 'string',
+        'mainspecialty:': 'string',
+        'age': 'Int32'
+})
+
+# Null values
+doctorsdf = doctorsdf.dropna(subset=['mainspecialty'])
+
+# Duplicates
 doctorsdf = doctorsdf.drop_duplicates(subset='doctorid', keep='first')
+
+# String transformations
+doctorsdf = doctorsdf.replace('\n','', regex=True)
+doctorsdf['mainspecialty'] = doctorsdf['mainspecialty'].apply(str.upper)
+
+# Drop invalid specialties
+doctorsdf = doctorsdf[doctorsdf['mainspecialty'].apply(is_valid_specialty)]
+
+# Drop invalid ages
+doctorsdf = doctorsdf[(doctorsdf['age'] >= 17) & (doctorsdf['age'] <= 122)]
+
 
 # Cleaning clinics.csv
 clinicsdf = clinicsdf.drop_duplicates(subset='clinicid', keep='first')
